@@ -55,7 +55,7 @@ export default function Dashboard() {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const { data: resumeData, error: dbError } = await supabase
+    const { data: insertedResume, error: dbError } = await supabase
       .from("resumes")
       .insert([
         {
@@ -64,7 +64,8 @@ export default function Dashboard() {
           file_path: data.path,
         },
       ])
-      .select();
+      .select()
+      .single();
 
     if (dbError) {
       console.log("DB Error:", dbError);
@@ -72,71 +73,81 @@ export default function Dashboard() {
       return;
     }
 
-    console.log("Inserted Row:", resumeData);
+    console.log("Inserted Row:", insertedResume);
+
+    await fetch("/api/extract-resume", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        resumeId: insertedResume.id,
+      }),
+    });
 
     alert("Resume uploaded successfully!");
   };
 
-  if (loading) {
+    if (loading) {
+      return (
+        <main className="flex min-h-screen items-center justify-center">
+          <h1>Loading...</h1>
+        </main>
+      );
+    }
+
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <h1>Loading...</h1>
-      </main>
-    );
-  }
+      <main className="min-h-screen p-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">
+              Welcome to Resume Builder 🚀
+            </h1>
 
-  return (
-    <main className="min-h-screen p-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">
-            Welcome to Resume Builder 🚀
-          </h1>
+            <p className="mt-2 text-gray-600">
+              {userEmail}
+            </p>
+          </div>
 
-          <p className="mt-2 text-gray-600">
-            {userEmail}
-          </p>
+          <button
+            onClick={handleLogout}
+            className="rounded bg-red-500 px-4 py-2 text-white hover:bg-red-600"
+          >
+            Logout
+          </button>
         </div>
 
-        <button
-          onClick={handleLogout}
-          className="rounded bg-red-500 px-4 py-2 text-white hover:bg-red-600"
-        >
-          Logout
-        </button>
-      </div>
+        <div className="mt-4">
+          <label
+            htmlFor="resume-upload"
+            className="inline-block cursor-pointer rounded-lg bg-blue-500 px-4 py-2 font-medium text-white hover:bg-blue-600"
+          >
+            Choose Resume
+          </label>
 
-      <div className="mt-4">
-        <label
-          htmlFor="resume-upload"
-          className="inline-block cursor-pointer rounded-lg bg-blue-500 px-4 py-2 font-medium text-white hover:bg-blue-600"
-        >
-          Choose Resume
-        </label>
+          <input
+            id="resume-upload"
+            type="file"
+            accept=".pdf,.doc,.docx"
+            className="hidden"
+            onChange={(e) =>
+              setFile(e.target.files?.[0] || null)
+            }
+          />
 
-        <input
-          id="resume-upload"
-          type="file"
-          accept=".pdf,.doc,.docx"
-          className="hidden"
-          onChange={(e) =>
-            setFile(e.target.files?.[0] || null)
-          }
-        />
+          {file && (
+            <p className="mt-2 text-sm text-gray-600">
+              Selected: {file.name}
+            </p>
+          )}
 
-        {file && (
-          <p className="mt-2 text-sm text-gray-600">
-            Selected: {file.name}
-          </p>
-        )}
-
-        <button
-          onClick={uploadResume}
-          className="mt-4 block rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
-        >
-          Upload Resume
-        </button>
-      </div>
-    </main >
-  );
+          <button
+            onClick={uploadResume}
+            className="mt-4 block rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+          >
+            Upload Resume
+          </button>
+        </div>
+      </main >
+    );
 }
